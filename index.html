@@ -4,87 +4,100 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>St. Johns College Library</title>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
-body{font-family:Arial;background:#f0f4f8;margin:0;padding:10px;}
-.box{max-width:550px;margin:auto;background:white;padding:20px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.1);margin-top:60px;}
-input{width:100%;padding:13px;margin:6px 0;border:1px solid #ccc;border-radius:8px;box-sizing:border-box;}
-button{width:100%;padding:14px;margin:6px 0;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-.card{padding:15px;border-radius:12px;margin:10px 0;background:#f9fafb;border-left:5px solid #2563eb;}
+body{font-family:Arial;background:#f0f4f8;margin:0;padding:15px;}
+.box{max-width:500px;margin:80px auto 20px;background:white;padding:20px;border-radius:20px;box-shadow:0 5px 20px rgba(0,0,0,0.1);}
+h2{color:#1e40af;text-align:center;}
+input{width:100%;padding:14px;margin:8px 0;border:1px solid #ccc;border-radius:10px;box-sizing:border-box;font-size:15px;}
+button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:15px;}
+.btn-issue{background:#059669;color:white;}
+.btn-return{background:#dc2626;color:white;}
+.card{padding:12px;border-radius:10px;margin:10px 0;background:#f1f5f9;border-left:5px solid #2563eb;}
 #loginScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;z-index:9999;display:flex;justify-content:center;align-items:center;}
-#settingsBtn{position:fixed;top:10px;right:10px;z-index:100;width:auto;padding:8px 15px;background:#334155;color:white;border-radius:20px;display:none;}
 </style>
 </head>
 <body>
 
+<!-- PASSWORD SCREEN -->
 <div id="loginScreen">
-  <div style="background:white;padding:25px;border-radius:15px;max-width:320px;width:90%;text-align:center;">
-    <h2>🔒 St. Johns Library</h2>
+  <div style="background:white;padding:30px;border-radius:20px;width:85%;max-width:320px;text-align:center;">
+    <h2 style="margin:0;">🔒 St. Johns Library</h2>
     <p>Password Enter Chey</p>
     <input type="password" id="passInput" placeholder="Password">
     <button onclick="checkPass()" style="background:#2563eb;color:white;">Login</button>
-    <p id="passError" style="color:red;display:none;margin-top:10px;">Wrong Password!</p>
-    <p style="font-size:12px;margin-top:10px;color:gray;">Default: stjohns123</p>
+    <p id="passError" style="color:red;display:none;">Wrong Password!</p>
+    <p style="font-size:11px;color:gray;margin-top:15px;">Default: stjohns123</p>
   </div>
 </div>
 
-<button id="settingsBtn" onclick="changePassword()">🔑 Change Password</button>
-<button onclick="logout()" style="position:fixed;top:10px;left:10px;z-index:100;width:auto;padding:8px 15px;background:#ef4444;color:white;border-radius:20px;">Logout</button>
+<button id="settingsBtn" onclick="changePassword()" style="position:fixed;top:12px;right:12px;z-index:100;width:auto;padding:8px 16px;background:#334155;color:white;border-radius:20px;display:none;">🔑 Change Pass</button>
+<button onclick="logout()" style="position:fixed;top:12px;left:12px;z-index:100;width:auto;padding:8px 16px;background:#ef4444;color:white;border-radius:20px;">Logout</button>
 
 <div class="box">
-<h2 style="text-align:center;">📚 St. Johns College Library</h2>
-<input type="text" id="book" placeholder="Book Name">
-<input type="text" id="roll" placeholder="Student Roll No / Name">
-<button style="background:#2563eb;color:white;" onclick="save()">➕ Add / Issue Book</button>
-<input type="text" id="search" placeholder="🔍 Search Book or Student" onkeyup="teacherSearch()">
+<h2>St. Johns College Library</h2>
+<input type="text" id="studentName" placeholder="Student Name">
+<input type="text" id="rollNumber" placeholder="Roll Number">
+<input type="text" id="bookNumber" placeholder="Book Number">
+<input type="text" id="bookName" placeholder="Book Name">
+<button class="btn-issue" onclick="issueBook()">✓ Issue - COMPLETED Identity</button>
+<button class="btn-return" onclick="returnBook()">↩ Return - Book Number tho Return</button>
+<hr style="margin:20px 0;">
+<h3 style="font-size:16px;">Teacher Search - Enter Roll number to See Full History</h3>
+<input type="text" id="teacherSearch" placeholder="Enter Roll Number for Sir to See History" onkeyup="showBooks()">
 <div id="list"></div>
-<div id="qrcode" style="display:flex;justify-content:center;margin-top:15px;"></div>
-<p style="text-align:center;font-size:12px;color:gray;margin-top:15px;">Scan QR to open this library</p>
 </div>
 
 <script>
-let defaultPass = "stjohns123";
-if(!localStorage.getItem('libPass')){ localStorage.setItem('libPass', defaultPass); }
-function checkLogin(){ if(sessionStorage.getItem('loggedIn') === 'yes'){ document.getElementById('loginScreen').style.display='none'; document.getElementById('settingsBtn').style.display='block'; } }
+// PASSWORD LOGIC
+if(!localStorage.getItem('libPass')){localStorage.setItem('libPass','stjohns123');}
+function checkLogin(){if(sessionStorage.getItem('loggedIn')==='yes'){document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}}
 checkLogin();
 function checkPass(){
-  let entered = document.getElementById('passInput').value;
-  let realPass = localStorage.getItem('libPass');
-  if(entered === realPass){ sessionStorage.setItem('loggedIn','yes'); document.getElementById('loginScreen').style.display='none'; document.getElementById('settingsBtn').style.display='block'; }
-  else{ document.getElementById('passError').style.display='block'; }
+  let e=document.getElementById('passInput').value;
+  let r=localStorage.getItem('libPass');
+  if(e===r){sessionStorage.setItem('loggedIn','yes');document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}
+  else{document.getElementById('passError').style.display='block';}
 }
 function changePassword(){
-  let oldP = prompt("Old Password Enter Chey:");
-  let realPass = localStorage.getItem('libPass');
-  if(oldP !== realPass){ alert("Old Password Wrong!"); return; }
-  let newP = prompt("New Password Enter Chey (min 4 chars):");
-  if(!newP || newP.length < 4){ alert("Password chala short ga undi!"); return; }
-  localStorage.setItem('libPass', newP); alert("✅ Password Changed! New: " + newP);
+  let o=prompt("Old Password:");
+  if(o!==localStorage.getItem('libPass')){alert("Wrong Old!");return;}
+  let n=prompt("New Password (min 4 chars):");
+  if(!n||n.length<4){alert("Too short!");return;}
+  localStorage.setItem('libPass',n);alert("✅ Changed to: "+n);
 }
-function logout(){ sessionStorage.removeItem('loggedIn'); location.reload(); }
+function logout(){sessionStorage.removeItem('loggedIn');location.reload();}
 
-let books = JSON.parse(localStorage.getItem("sj_lib_final")) || [];
-function save(){
-  let b = document.getElementById('book').value;
-  let r = document.getElementById('roll').value;
-  if(!b) return alert("Book Name Enter Chey!");
-  books.push({book:b, roll:r, time:new Date().toLocaleString()});
-  localStorage.setItem("sj_lib_final", JSON.stringify(books));
-  document.getElementById('book').value=''; document.getElementById('roll').value=''; show();
+// LIBRARY LOGIC
+let books=JSON.parse(localStorage.getItem("stjohns_lib"))||[];
+function issueBook(){
+  let s=document.getElementById('studentName').value;
+  let r=document.getElementById('rollNumber').value;
+  let bn=document.getElementById('bookNumber').value;
+  let bname=document.getElementById('bookName').value;
+  if(!s||!r||!bn||!bname){alert("Anni fields fill chey!");return;}
+  books.push({studentName:s,rollNumber:r,bookNumber:bn,bookName:bname,time:new Date().toLocaleString()});
+  localStorage.setItem("stjohns_lib",JSON.stringify(books));
+  document.getElementById('studentName').value='';document.getElementById('rollNumber').value='';document.getElementById('bookNumber').value='';document.getElementById('bookName').value='';
+  showBooks();alert("✅ Issued!");
 }
-function show(){
-  let html=""; let filter = document.getElementById('search').value.toLowerCase();
-  books.slice().reverse().forEach((x,i)=>{
-    if(x.book.toLowerCase().includes(filter) || x.roll.toLowerCase().includes(filter)){
-      html+=`<div class="card"><b>${x.book}</b><br>Student: ${x.roll}<br><small>${x.time}</small><br><button onclick="removeBook(${books.length-1-i})" style="background:#dc2626;color:white;padding:5px;margin-top:8px;width:auto;">Return</button></div>`;
+function returnBook(){
+  let bn=document.getElementById('bookNumber').value;
+  if(!bn){alert("Return kosam Book Number enter chey!");return;}
+  let idx=books.findIndex(x=>x.bookNumber===bn);
+  if(idx===-1){alert("Book Number not found!");return;}
+  books.splice(idx,1);localStorage.setItem("stjohns_lib",JSON.stringify(books));showBooks();alert("✅ Returned!");
+}
+function showBooks(){
+  let filter=document.getElementById('teacherSearch').value.toLowerCase();
+  let html="";
+  books.slice().reverse().forEach(x=>{
+    if(x.rollNumber.toLowerCase().includes(filter) || x.studentName.toLowerCase().includes(filter) || x.bookNumber.toLowerCase().includes(filter)){
+      html+=`<div class="card"><b>${x.bookName}</b> (${x.bookNumber})<br>👤 ${x.studentName} - ${x.rollNumber}<br><small>${x.time}</small></div>`;
     }
   });
-  document.getElementById('list').innerHTML = html || "<p style='text-align:center;'>No Books</p>";
+  document.getElementById('list').innerHTML=html||"<p style='text-align:center;color:gray;'>No Records</p>";
 }
-function removeBook(i){ if(confirm("Return this book?")){ books.splice(i,1); localStorage.setItem("sj_lib_final", JSON.stringify(books)); show(); } }
-function teacherSearch(){ show(); }
-show();
-new QRCode(document.getElementById("qrcode"), {text: window.location.href, width:150, height:150});
+showBooks();
 </script>
 </body>
 </html>
