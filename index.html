@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>St. Johns College Library</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<style>
+body{font-family:Arial;background:#f0f4f8;padding:10px;margin:0}
+.box{max-width:550px;margin:auto;background:white;padding:20px;border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,0.15)}
+input{width:100%;padding:13px;margin:7px 0;border:1.5px solid #ccc;border-radius:8px;box-sizing:border-box;font-size:15px}
+button{width:100%;padding:14px;margin:7px 0;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:15px}
+.btn-issue{background:#059669;color:white}
+.btn-return{background:#dc2626;color:white}
+.card{padding:15px;border-radius:12px;text-align:center;margin-top:15px;border:2px solid}
+.green{background:#d1fae5;border-color:#059669;color:#065f46}
+.blue{background:#dbeafe;border-color:#2563eb;color:#1e40af}
+.item{border:1px solid #ddd;padding:10px;margin:6px 0;border-radius:8px;background:#f9fafb}
+</style>
+</head>
+<body>
+<div class="box">
+<h2 style="text-align:center;color:#1e40af;margin:0;">St. Johns College Library</h2>
+<!-- Subtitle teesesanu - ippudu em kanipinchadu -->
+
+<input id="sname" placeholder="Student Name" style="margin-top:20px">
+<input id="roll" placeholder="Roll Number">
+<input id="bookNumber" placeholder="Book Number" style="font-weight:bold;border:2px solid #1e40af;">
+<input id="bookName" placeholder="Book Name">
+
+<button class="btn-issue" onclick="issueBook()">✓ Issue - COMPLETED Identity</button>
+<button class="btn-return" onclick="returnBook()">↩ Return - Book Number tho Return</button>
+
+<div id="identityBox"></div>
+
+<hr style="margin:20px 0">
+<h3 style="margin:0;">Teacher Search - Enter Roll number to See Full History</h3>
+<input id="searchRoll" placeholder="Enter Roll Number for Sir to See History" oninput="teacherSearch()">
+
+<div id="activeList" style="display:none"></div>
+<div id="historyList" style="display:none"></div>
+</div>
+
+<script>
+let books = JSON.parse(localStorage.getItem("sj_lib_final2")||"[]");
+let history = JSON.parse(localStorage.getItem("sj_lib_hist2")||"[]");
+
+function issueBook(){
+  let sname=document.getElementById("sname").value.trim();
+  let roll=document.getElementById("roll").value.trim();
+  let bnum=document.getElementById("bookNumber").value.trim();
+  let bname=document.getElementById("bookName").value.trim();
+  if(!sname||!roll||!bnum||!bname){ alert("Anni fill chey"); return; }
+  
+  let now = new Date();
+  let due = new Date(); due.setDate(due.getDate()+10);
+  let rec = {sname, roll, bookNumber:bnum, bookName:bname, issueDate: now.toLocaleString(), dueDate: due.toLocaleDateString(), dueTime: due.getTime()};
+
+  books.push(rec);
+  history.push({...rec, action:"ISSUED", time:now.toLocaleString()});
+  save();
+
+  document.getElementById("activeList").style.display="block";
+  document.getElementById("identityBox").innerHTML=`
+  <div class="card green">
+    <h2 style="margin:0;">✅ IDENTITY - COMPLETED</h2>
+    <p><b>Student:</b> ${sname} (${roll})</p>
+    <p><b>Book:</b> ${bnum} - ${bname}</p>
+    <p><b>Issue:</b> ${rec.issueDate}<br><b>Due:</b> ${rec.dueDate}</p>
+    <div id="qr" style="display:flex;justify-content:center;margin:10px 0"></div>
+    <span style="background:green;color:white;padding:8px 18px;border-radius:8px;font-weight:bold;">COMPLETED ✅</span>
+  </div>`;
+  setTimeout(()=>{ document.getElementById("qr").innerHTML=""; new QRCode(document.getElementById("qr"),{text:`${bnum}-${bname}-${roll}`,width:130,height:130}); },300);
+  showActive();
+}
+
+function returnBook(){
+  let roll=document.getElementById("roll").value.trim();
+  let bnum=document.getElementById("bookNumber").value.trim();
+  let found = books.find(b=>b.roll==roll && b.bookNumber==bnum);
+  if(!found){ alert("Active list lo ledu"); return; }
+  books = books.filter(b=>!(b.roll==roll && b.bookNumber==bnum));
+  history.push({...found, action:"RETURNED", time:new Date().toLocaleString()});
+  save();
+  document.getElementById("activeList").style.display="block";
+  document.getElementById("identityBox").innerHTML=`<div class="card blue"><h3>↩️ RETURN COMPLETED</h3><p>${found.bookNumber} - ${found.bookName}</p><p>Returned: ${new Date().toLocaleString()}</p></div>`;
+  showActive();
+}
+
+function showActive(){
+  let html="<h4>Active Books ("+books.length+"):</h4>";
+  books.forEach(b=>{ html+=`<div class="item"><b>${b.roll}</b> - ${b.bookNumber} - ${b.bookName}<br><small>Due: ${b.dueDate}</small></div>`; });
+  document.getElementById("activeList").innerHTML=html;
+  document.getElementById("activeList").style.display="block";
+}
+function teacherSearch(){
+  let r = document.getElementById("searchRoll").value.trim();
+  if(!r){ document.getElementById("historyList").style.display="none"; return; }
+  document.getElementById("historyList").style.display="block";
+  let list = history.filter(h=>h.roll.toLowerCase()==r.toLowerCase());
+  let html=`<h4>History for ${r}:</h4>`;
+  list.reverse().forEach(h=>{ html+=`<div class="item"><b>${h.bookNumber} - ${h.bookName}</b> - ${h.action}<br><small>${h.time}</small></div>`; });
+  document.getElementById("historyList").innerHTML=html;
+}
+function save(){
+  localStorage.setItem("sj_lib_final2",JSON.stringify(books));
+  localStorage.setItem("sj_lib_hist2",JSON.stringify(history));
+}
+// showActive() - teesesanu, open ayyaka em kanipinchadu
+</script>
+</body>
+</html>
