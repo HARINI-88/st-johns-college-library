@@ -18,19 +18,18 @@ button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-
 </head>
 <body>
 
-<!-- PASSWORD SCREEN -->
 <div id="loginScreen">
   <div style="background:white;padding:30px;border-radius:20px;width:85%;max-width:320px;text-align:center;">
     <h2 style="margin:0;">🔒 St. Johns Library</h2>
-    <p>Password Enter Chey</p>
+    <p>Enter Password to Access Library</p>
     <input type="password" id="passInput" placeholder="Password">
     <button onclick="checkPass()" style="background:#2563eb;color:white;">Login</button>
-    <p id="passError" style="color:red;display:none;">Wrong Password!</p>
-    <p style="font-size:11px;color:gray;margin-top:15px;">Default: stjohns123</p>
+    <p id="passError" style="color:red;display:none;margin-top:10px;">Wrong Password!</p>
+    <p style="font-size:11px;color:gray;margin-top:15px;">Default Password: stjohns123</p>
   </div>
 </div>
 
-<button id="settingsBtn" onclick="changePassword()" style="position:fixed;top:12px;right:12px;z-index:100;width:auto;padding:8px 16px;background:#334155;color:white;border-radius:20px;display:none;">🔑 Change Pass</button>
+<button id="settingsBtn" onclick="changePassword()" style="position:fixed;top:12px;right:12px;z-index:100;width:auto;padding:8px 16px;background:#334155;color:white;border-radius:20px;display:none;">🔑 Change Password</button>
 <button onclick="logout()" style="position:fixed;top:12px;left:12px;z-index:100;width:auto;padding:8px 16px;background:#ef4444;color:white;border-radius:20px;">Logout</button>
 
 <div class="box">
@@ -39,16 +38,15 @@ button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-
 <input type="text" id="rollNumber" placeholder="Roll Number">
 <input type="text" id="bookNumber" placeholder="Book Number">
 <input type="text" id="bookName" placeholder="Book Name">
-<button class="btn-issue" onclick="issueBook()">✓ Issue - COMPLETED Identity</button>
-<button class="btn-return" onclick="returnBook()">↩ Return - Book Number tho Return</button>
+<button class="btn-issue" onclick="issueBook()">✓ Issue Book</button>
+<button class="btn-return" onclick="returnBook()">↩ Return Book</button>
 <hr style="margin:20px 0;">
-<h3 style="font-size:16px;">Teacher Search - Enter Roll number to See Full History</h3>
-<input type="text" id="teacherSearch" placeholder="Enter Roll Number for Sir to See History" onkeyup="showBooks()">
+<h3 style="font-size:16px;">Teacher Search - Enter Roll Number to View History</h3>
+<input type="text" id="teacherSearch" placeholder="Enter Roll Number to View History" onkeyup="showBooks()">
 <div id="list"></div>
 </div>
 
 <script>
-// PASSWORD LOGIC
 if(!localStorage.getItem('libPass')){localStorage.setItem('libPass','stjohns123');}
 function checkLogin(){if(sessionStorage.getItem('loggedIn')==='yes'){document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}}
 checkLogin();
@@ -59,33 +57,32 @@ function checkPass(){
   else{document.getElementById('passError').style.display='block';}
 }
 function changePassword(){
-  let o=prompt("Old Password:");
-  if(o!==localStorage.getItem('libPass')){alert("Wrong Old!");return;}
-  let n=prompt("New Password (min 4 chars):");
-  if(!n||n.length<4){alert("Too short!");return;}
-  localStorage.setItem('libPass',n);alert("✅ Changed to: "+n);
+  let o=prompt("Enter Old Password:");
+  if(o!==localStorage.getItem('libPass')){alert("Wrong Old Password!");return;}
+  let n=prompt("Enter New Password (min 4 characters):");
+  if(!n||n.length<4){alert("Password too short!");return;}
+  localStorage.setItem('libPass',n);alert("✅ Password Changed Successfully! New Password: "+n);
 }
 function logout(){sessionStorage.removeItem('loggedIn');location.reload();}
 
-// LIBRARY LOGIC
 let books=JSON.parse(localStorage.getItem("stjohns_lib"))||[];
 function issueBook(){
   let s=document.getElementById('studentName').value;
   let r=document.getElementById('rollNumber').value;
   let bn=document.getElementById('bookNumber').value;
   let bname=document.getElementById('bookName').value;
-  if(!s||!r||!bn||!bname){alert("Anni fields fill chey!");return;}
+  if(!s||!r||!bn||!bname){alert("Please fill all fields!");return;}
   books.push({studentName:s,rollNumber:r,bookNumber:bn,bookName:bname,time:new Date().toLocaleString()});
   localStorage.setItem("stjohns_lib",JSON.stringify(books));
   document.getElementById('studentName').value='';document.getElementById('rollNumber').value='';document.getElementById('bookNumber').value='';document.getElementById('bookName').value='';
-  showBooks();alert("✅ Issued!");
+  showBooks();alert("✅ Book Issued Successfully!");
 }
 function returnBook(){
   let bn=document.getElementById('bookNumber').value;
-  if(!bn){alert("Return kosam Book Number enter chey!");return;}
+  if(!bn){alert("Please enter Book Number to return!");return;}
   let idx=books.findIndex(x=>x.bookNumber===bn);
   if(idx===-1){alert("Book Number not found!");return;}
-  books.splice(idx,1);localStorage.setItem("stjohns_lib",JSON.stringify(books));showBooks();alert("✅ Returned!");
+  books.splice(idx,1);localStorage.setItem("stjohns_lib",JSON.stringify(books));showBooks();alert("✅ Book Returned Successfully!");
 }
 function showBooks(){
   let filter=document.getElementById('teacherSearch').value.toLowerCase();
@@ -95,7 +92,7 @@ function showBooks(){
       html+=`<div class="card"><b>${x.bookName}</b> (${x.bookNumber})<br>👤 ${x.studentName} - ${x.rollNumber}<br><small>${x.time}</small></div>`;
     }
   });
-  document.getElementById('list').innerHTML=html||"<p style='text-align:center;color:gray;'>No Records</p>";
+  document.getElementById('list').innerHTML=html||"<p style='text-align:center;color:gray;'>No Records Found</p>";
 }
 showBooks();
 </script>
