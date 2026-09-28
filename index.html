@@ -12,9 +12,13 @@ input{width:100%;padding:14px;margin:8px 0;border:1px solid #ccc;border-radius:1
 button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-weight:bold;cursor:pointer;font-size:15px;}
 .btn-issue{background:#059669;color:white;}
 .btn-return{background:#dc2626;color:white;}
+.btn-wa{background:#25D366;color:white;}
 .card{padding:12px;border-radius:10px;margin:10px 0;background:#f1f5f9;border-left:5px solid #2563eb;}
 .overdue{border-left:5px solid #dc2626;background:#fef2f2;}
+.due-soon{border-left:5px solid #f59e0b;background:#fffbeb;animation:blink 1.2s infinite;}
+@keyframes blink{0%{background:#fffbeb;}50%{background:#fde68a;transform:scale(1.02);}100%{background:#fffbeb;}}
 #loginScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;z-index:9999;display:flex;justify-content:center;align-items:center;}
+.badge{font-size:11px;padding:4px 8px;border-radius:12px;color:white;font-weight:bold;}
 </style>
 </head>
 <body>
@@ -25,25 +29,33 @@ button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-
 <input type="password" id="passInput" placeholder="Password">
 <button onclick="checkPass()" style="background:#2563eb;color:white;">Login</button>
 <p id="passError" style="color:red;display:none;">Wrong Password!</p>
-<p style="font-size:11px;color:gray;">Default: stjohns123</p>
 </div>
 </div>
 <button id="settingsBtn" onclick="changePassword()" style="position:fixed;top:12px;right:12px;z-index:100;width:auto;padding:8px 16px;background:#334155;color:white;border-radius:20px;display:none;">🔑 Change Password</button>
 <button onclick="logout()" style="position:fixed;top:12px;left:12px;z-index:100;width:auto;padding:8px 16px;background:#ef4444;color:white;border-radius:20px;">Logout</button>
 <div class="box">
 <h2>St. Johns College Library</h2>
-<p style="text-align:center;color:#059669;font-weight:bold;background:#dcfce7;padding:8px;border-radius:8px;">⚠️ Max 2 Books | Due: 14 Days</p>
+<p style="text-align:center;color:#059669;font-weight:bold;background:#dcfce7;padding:8px;border-radius:8px;">⚠️ Max 2 Books | Due: 14 Days | WhatsApp Msg</p>
 <input type="text" id="studentName" placeholder="Student Name">
 <input type="text" id="rollNumber" placeholder="Roll Number">
+<input type="text" id="mobile" placeholder="Student Mobile (ex: 9876543210)">
 <input type="text" id="bookNumber" placeholder="Book Number">
 <input type="text" id="bookName" placeholder="Book Name">
-<label style="font-size:13px;font-weight:bold;">Due Date (Auto 14 days, change if needed):</label>
+<label style="font-size:13px;font-weight:bold;">Due Date:</label>
 <input type="date" id="dueDate">
-<button class="btn-issue" onclick="issueBook()">✓ Issue Book</button>
+<button class="btn-issue" onclick="issueBook()">✓ Issue Book + Send WhatsApp</button>
 <button class="btn-return" onclick="returnBook()">↩ Return Book</button>
 <hr>
-<h3>Teacher Search</h3>
-<input type="text" id="teacherSearch" placeholder="Enter Roll Number" onkeyup="showBooks()">
+<h3>Teacher Search + Date Filter</h3>
+<div style="display:flex;gap:8px;">
+<input type="text" id="teacherSearch" placeholder="Roll No / Name / Book" onkeyup="showBooks()" style="flex:1;">
+<input type="date" id="dateSearch" onchange="showBooks()" style="flex:1;">
+</div>
+<div style="margin:10px 0;display:flex;gap:6px;flex-wrap:wrap;">
+<button onclick="setTodayFilter()" style="width:auto;padding:8px 10px;font-size:11px;background:#2563eb;color:white;">📅 Today</button>
+<button onclick="showDueSoon()" style="width:auto;padding:8px 10px;font-size:11px;background:#f59e0b;color:white;">⚠️ Due in 2 Days - BLINK</button>
+<button onclick="clearFilters()" style="width:auto;padding:8px 10px;font-size:11px;background:#6b7280;color:white;">Clear</button>
+</div>
 <div id="list"></div>
 </div>
 <script>
@@ -51,41 +63,70 @@ if(!localStorage.getItem('libPass')){localStorage.setItem('libPass','stjohns123'
 function checkLogin(){if(sessionStorage.getItem('loggedIn')==='yes'){document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}}
 checkLogin();
 function checkPass(){let e=document.getElementById('passInput').value;let r=localStorage.getItem('libPass');if(e===r){sessionStorage.setItem('loggedIn','yes');document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}else{document.getElementById('passError').style.display='block';}}
-function changePassword(){let o=prompt("Enter Old Password:");if(o!==localStorage.getItem('libPass')){alert("Wrong!");return;}let n=prompt("New Password:");if(!n||n.length<4){alert("Too short!");return;}localStorage.setItem('libPass',n);alert("Changed: "+n);}
+function changePassword(){let o=prompt("Old:");if(o!==localStorage.getItem('libPass')){alert("Wrong!");return;}let n=prompt("New:");if(!n||n.length<4){alert("Too short!");return;}localStorage.setItem('libPass',n);alert("Changed: "+n);}
 function logout(){sessionStorage.removeItem('loggedIn');location.reload();}
 let books=JSON.parse(localStorage.getItem("stjohns_lib"))||[];
 function setDefaultDue(){let d=new Date();d.setDate(d.getDate()+14);document.getElementById('dueDate').value=d.toISOString().split('T')[0];}
 setDefaultDue();
+function sendWA(mobile,msg){
+let clean = mobile.replace(/\D/g,''); if(clean.length==10) clean='91'+clean;
+let url=`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`;
+window.open(url,'_blank');
+}
 function issueBook(){
 let s=document.getElementById('studentName').value.trim();
 let r=document.getElementById('rollNumber').value.trim();
+let mob=document.getElementById('mobile').value.trim();
 let bn=document.getElementById('bookNumber').value.trim();
 let bname=document.getElementById('bookName').value.trim();
 let due=document.getElementById('dueDate').value;
-if(!s||!r||!bn||!bname||!due){alert("Please fill all fields!");return;}
+if(!s||!r||!mob||!bn||!bname||!due){alert("Fill all!");return;}
 let count=books.filter(x=>x.rollNumber.toLowerCase()===r.toLowerCase()).length;
-if(count>=2){alert("LIMIT! Student "+r+" already has 2 books!");return;}
+if(count>=2){alert("LIMIT!");return;}
 if(books.some(x=>x.bookNumber===bn)){alert("Already issued!");return;}
-books.push({studentName:s,rollNumber:r,bookNumber:bn,bookName:bname,dueDate:due,time:new Date().toLocaleString()});
+books.push({studentName:s,rollNumber:r,mobile:mob,bookNumber:bn,bookName:bname,dueDate:due,issueDate:new Date().toISOString().split('T')[0],time:new Date().toLocaleString()});
 localStorage.setItem("stjohns_lib",JSON.stringify(books));
-document.getElementById('studentName').value='';document.getElementById('rollNumber').value='';document.getElementById('bookNumber').value='';document.getElementById('bookName').value='';
-setDefaultDue();showBooks();alert("Issued! Due: "+due+" ("+(count+1)+"/2)");}
+document.getElementById('studentName').value='';document.getElementById('rollNumber').value='';document.getElementById('mobile').value='';document.getElementById('bookNumber').value='';document.getElementById('bookName').value='';
+setDefaultDue();showBooks();
+let msg=`📚 *St. Johns College Library*%0A%0AHello ${s} (${r}),%0A✅ Book Issued:%0A📖 ${bname} (${bn})%0A📅 Due Date: ${due}%0A⚠️ Max 2 Books | Please return on time!%0A%0A- Library`;
+sendWA(mob,`📚 St. Johns College Library\n\nHello ${s} (${r}),\n✅ Book Issued:\n📖 ${bname} (${bn})\n📅 Due Date: ${due}\n⚠️ Max 2 Books | Please return on time!\n\n- Library`);
+}
 function returnBook(){
 let bn=document.getElementById('bookNumber').value.trim();
-if(!bn){alert("Enter Book Number!");return;}
+if(!bn){alert("Enter Book No!");return;}
 let idx=books.findIndex(x=>x.bookNumber===bn);
 if(idx===-1){alert("Not found!");return;}
-books.splice(idx,1);localStorage.setItem("stjohns_lib",JSON.stringify(books));showBooks();alert("Returned!");}
-function showBooks(){
+let bk=books[idx];
+books.splice(idx,1);localStorage.setItem("stjohns_lib",JSON.stringify(books));showBooks();
+sendWA(bk.mobile,`📚 St. Johns Library\n\nHi ${bk.studentName},\n✅ Book Returned Successfully:\n📖 ${bk.bookName} (${bk.bookNumber})\nThank you!\n\n- Library`);
+}
+function setTodayFilter(){document.getElementById('dateSearch').value=new Date().toISOString().split('T')[0];showBooks();}
+function showDueSoon(){document.getElementById('teacherSearch').value="";document.getElementById('dateSearch').value="";showBooks(true);}
+function clearFilters(){document.getElementById('teacherSearch').value="";document.getElementById('dateSearch').value="";showBooks();}
+function sendReminder(b){
+let msg=`⚠️ *Library Reminder - St. Johns College*%0A%0AHi ${b.studentName} (${b.rollNumber}),%0AYour book due in 2 days!%0A📖 ${b.bookName} (${b.bookNumber})%0A📅 Due: ${b.dueDate}%0A📱 Please return on time to avoid fine.%0A%0A- Library`;
+sendWA(b.mobile,`⚠️ Library Reminder - St. Johns College\n\nHi ${b.studentName} (${b.rollNumber}),\nYour book due in 2 days!\n📖 ${b.bookName} (${b.bookNumber})\n📅 Due: ${b.dueDate}\n📱 Please return on time to avoid fine.\n\n- Library`);
+}
+function showBooks(onlyDueSoon=false){
 let filter=document.getElementById('teacherSearch').value.toLowerCase();
-let html="";let today=new Date().toISOString().split('T')[0];
-let filtered=books.slice().reverse().filter(x=>x.rollNumber.toLowerCase().includes(filter)||x.studentName.toLowerCase().includes(filter)||x.bookNumber.toLowerCase().includes(filter));
-filtered.forEach(x=>{
-let isOverdue = x.dueDate < today;
-let cls = isOverdue? "card overdue" : "card";
-let overdueText = isOverdue? " <span style='color:red;font-weight:bold;'>⚠️ OVERDUE!</span>" : "";
-html+=`<div class="${cls}"><b>${x.bookName}</b> (${x.bookNumber})${overdueText}<br>👤 ${x.studentName} - ${x.rollNumber}<br>📅 Due: ${x.dueDate}<br><small>Issued: ${x.time}</small></div>`;});
-document.getElementById('list').innerHTML=html||"<p style='text-align:center;color:gray;'>No Records</p>";}
+let dateFilter=document.getElementById('dateSearch').value;
+let html="";let today=new Date();let todayStr=today.toISOString().split('T')[0];
+let in2Days=new Date();in2Days.setDate(today.getDate()+2);let in2DaysStr=in2Days.toISOString().split('T')[0];
+let filtered=books.slice().reverse().filter(x=>{
+if(onlyDueSoon){return x.dueDate>=todayStr && x.dueDate<=in2DaysStr;}
+let matchText = x.rollNumber.toLowerCase().includes(filter)||x.studentName.toLowerCase().includes(filter)||x.bookNumber.toLowerCase().includes(filter)||x.bookName.toLowerCase().includes(filter)||(x.mobile||"").includes(filter);
+let matchDate = dateFilter? (x.issueDate===dateFilter || x.dueDate===dateFilter) : true;
+return matchText && matchDate;
+});
+filtered.forEach((x,i)=>{
+let isOverdue = x.dueDate < todayStr;
+let isDueSoon =!isOverdue && x.dueDate<=in2DaysStr;
+let cls = isOverdue? "card overdue" : (isDueSoon? "card due-soon" : "card");
+let status = isOverdue? "<span class='badge' style='background:#dc2626;'>OVERDUE</span>" : (isDueSoon? "<span class='badge' style='background:#f59e0b;'>⏰ DUE IN 2 DAYS - BLINK</span>" : "<span class='badge' style='background:#059669;'>Active</span>");
+html+=`<div class="${cls}">${status}<br><b>${x.bookName}</b> (${x.bookNumber})<br>👤 ${x.studentName} - ${x.rollNumber}<br>📱 ${x.mobile}<br>📅 Due: ${x.dueDate} | Issued: ${x.issueDate}<br><small>${x.time}</small><br><div style="margin-top:8px;display:flex;gap:6px;"><a href="tel:${x.mobile}" style="background:#2563eb;color:white;padding:6px 10px;border-radius:8px;text-decoration:none;font-size:12px;">📞 Call</a><button onclick='sendReminder(${JSON.stringify(x).replace(/'/g,"&#39;")})' style="width:auto;padding:6px 10px;font-size:12px;background:#25D366;color:white;">💬 WhatsApp Reminder</button></div></div>`;
+});
+document.getElementById('list').innerHTML=html||"<p style='text-align:center;color:gray;'>No Records</p>";
+}
 showBooks();
 </script>
 </body>
