@@ -17,7 +17,6 @@ button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-
 </style>
 </head>
 <body>
-
 <div id="loginScreen">
   <div style="background:white;padding:30px;border-radius:20px;width:85%;max-width:320px;text-align:center;">
     <h2 style="margin:0;">🔒 St. Johns Library</h2>
@@ -25,15 +24,14 @@ button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-
     <input type="password" id="passInput" placeholder="Password">
     <button onclick="checkPass()" style="background:#2563eb;color:white;">Login</button>
     <p id="passError" style="color:red;display:none;margin-top:10px;">Wrong Password!</p>
-    <p style="font-size:11px;color:gray;margin-top:15px;">Default Password: stjohns123</p>
+    <p style="font-size:11px;color:gray;margin-top:15px;">Default: stjohns123</p>
   </div>
 </div>
-
 <button id="settingsBtn" onclick="changePassword()" style="position:fixed;top:12px;right:12px;z-index:100;width:auto;padding:8px 16px;background:#334155;color:white;border-radius:20px;display:none;">🔑 Change Password</button>
 <button onclick="logout()" style="position:fixed;top:12px;left:12px;z-index:100;width:auto;padding:8px 16px;background:#ef4444;color:white;border-radius:20px;">Logout</button>
-
 <div class="box">
 <h2>St. Johns College Library</h2>
+<p style="text-align:center;color:#059669;font-weight:bold;background:#dcfce7;padding:8px;border-radius:8px;">⚠️ Max 2 Books Per Student Rule</p>
 <input type="text" id="studentName" placeholder="Student Name">
 <input type="text" id="rollNumber" placeholder="Roll Number">
 <input type="text" id="bookNumber" placeholder="Book Number">
@@ -41,58 +39,44 @@ button{width:100%;padding:15px;margin:8px 0;border:none;border-radius:10px;font-
 <button class="btn-issue" onclick="issueBook()">✓ Issue Book</button>
 <button class="btn-return" onclick="returnBook()">↩ Return Book</button>
 <hr style="margin:20px 0;">
-<h3 style="font-size:16px;">Teacher Search - Enter Roll Number to View History</h3>
-<input type="text" id="teacherSearch" placeholder="Enter Roll Number to View History" onkeyup="showBooks()">
+<h3 style="font-size:16px;">Teacher Search - Enter Roll Number</h3>
+<input type="text" id="teacherSearch" placeholder="Enter Roll Number" onkeyup="showBooks()">
 <div id="list"></div>
 </div>
-
 <script>
 if(!localStorage.getItem('libPass')){localStorage.setItem('libPass','stjohns123');}
 function checkLogin(){if(sessionStorage.getItem('loggedIn')==='yes'){document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}}
 checkLogin();
-function checkPass(){
-  let e=document.getElementById('passInput').value;
-  let r=localStorage.getItem('libPass');
-  if(e===r){sessionStorage.setItem('loggedIn','yes');document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}
-  else{document.getElementById('passError').style.display='block';}
-}
-function changePassword(){
-  let o=prompt("Enter Old Password:");
-  if(o!==localStorage.getItem('libPass')){alert("Wrong Old Password!");return;}
-  let n=prompt("Enter New Password (min 4 characters):");
-  if(!n||n.length<4){alert("Password too short!");return;}
-  localStorage.setItem('libPass',n);alert("✅ Password Changed Successfully! New Password: "+n);
-}
+function checkPass(){let e=document.getElementById('passInput').value;let r=localStorage.getItem('libPass');if(e===r){sessionStorage.setItem('loggedIn','yes');document.getElementById('loginScreen').style.display='none';document.getElementById('settingsBtn').style.display='block';}else{document.getElementById('passError').style.display='block';}}
+function changePassword(){let o=prompt("Enter Old Password:");if(o!==localStorage.getItem('libPass')){alert("Wrong Old!");return;}let n=prompt("New Password:");if(!n||n.length<4){alert("Too short!");return;}localStorage.setItem('libPass',n);alert("✅ Changed: "+n);}
 function logout(){sessionStorage.removeItem('loggedIn');location.reload();}
-
 let books=JSON.parse(localStorage.getItem("stjohns_lib"))||[];
 function issueBook(){
-  let s=document.getElementById('studentName').value;
-  let r=document.getElementById('rollNumber').value;
-  let bn=document.getElementById('bookNumber').value;
-  let bname=document.getElementById('bookName').value;
+  let s=document.getElementById('studentName').value.trim();
+  let r=document.getElementById('rollNumber').value.trim();
+  let bn=document.getElementById('bookNumber').value.trim();
+  let bname=document.getElementById('bookName').value.trim();
   if(!s||!r||!bn||!bname){alert("Please fill all fields!");return;}
+  let count = books.filter(x=>x.rollNumber.toLowerCase()===r.toLowerCase()).length;
+  if(count>=2){alert("❌ LIMIT REACHED! Student "+r+" already has 2 books. Please return one book first!");return;}
+  if(books.some(x=>x.bookNumber===bn)){alert("❌ This Book Number already issued!");return;}
   books.push({studentName:s,rollNumber:r,bookNumber:bn,bookName:bname,time:new Date().toLocaleString()});
   localStorage.setItem("stjohns_lib",JSON.stringify(books));
   document.getElementById('studentName').value='';document.getElementById('rollNumber').value='';document.getElementById('bookNumber').value='';document.getElementById('bookName').value='';
-  showBooks();alert("✅ Book Issued Successfully!");
+  showBooks();alert("✅ Book Issued! ("+(count+1)+"/2)");
 }
 function returnBook(){
-  let bn=document.getElementById('bookNumber').value;
-  if(!bn){alert("Please enter Book Number to return!");return;}
+  let bn=document.getElementById('bookNumber').value.trim();
+  if(!bn){alert("Enter Book Number to return!");return;}
   let idx=books.findIndex(x=>x.bookNumber===bn);
   if(idx===-1){alert("Book Number not found!");return;}
-  books.splice(idx,1);localStorage.setItem("stjohns_lib",JSON.stringify(books));showBooks();alert("✅ Book Returned Successfully!");
+  books.splice(idx,1);localStorage.setItem("stjohns_lib",JSON.stringify(books));showBooks();alert("✅ Returned!");
 }
 function showBooks(){
   let filter=document.getElementById('teacherSearch').value.toLowerCase();
-  let html="";
-  books.slice().reverse().forEach(x=>{
-    if(x.rollNumber.toLowerCase().includes(filter) || x.studentName.toLowerCase().includes(filter) || x.bookNumber.toLowerCase().includes(filter)){
-      html+=`<div class="card"><b>${x.bookName}</b> (${x.bookNumber})<br>👤 ${x.studentName} - ${x.rollNumber}<br><small>${x.time}</small></div>`;
-    }
-  });
-  document.getElementById('list').innerHTML=html||"<p style='text-align:center;color:gray;'>No Records Found</p>";
+  let html="";let filtered = books.slice().reverse().filter(x=>x.rollNumber.toLowerCase().includes(filter)||x.studentName.toLowerCase().includes(filter)||x.bookNumber.toLowerCase().includes(filter));
+  filtered.forEach(x=>{html+=`<div class="card"><b>${x.bookName}</b> (${x.bookNumber})<br>👤 ${x.studentName} - ${x.rollNumber}<br><small>${x.time}</small></div>`;});
+  document.getElementById('list').innerHTML=html||"<p style='text-align:center;color:gray;'>No Records</p>";
 }
 showBooks();
 </script>
